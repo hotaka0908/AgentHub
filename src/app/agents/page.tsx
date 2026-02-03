@@ -3,30 +3,44 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AgentList } from '@/components/agents/agent-list'
 import { AgentFilter } from '@/components/agents/agent-filter'
 import { Agent } from '@/types'
+import { filterSeedAgents } from '@/lib/seed-agents'
 
 interface AgentsPageProps {
   searchParams: { category?: string; search?: string }
 }
 
 async function AgentListWrapper({ category, search }: { category?: string; search?: string }) {
-  const supabase = await createServerSupabaseClient()
+  let agents: Agent[] = []
 
-  let query = supabase
-    .from('agents')
-    .select('*')
-    .eq('is_active', true)
+  try {
+    const supabase = await createServerSupabaseClient()
 
-  if (category && category !== 'all') {
-    query = query.eq('category', category)
+    let query = supabase
+      .from('agents')
+      .select('*')
+      .eq('is_active', true)
+
+    if (category && category !== 'all') {
+      query = query.eq('category', category)
+    }
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false })
+    if (!error && data && data.length > 0) {
+      agents = data as Agent[]
+    }
+  } catch (error) {
+    console.error('Failed to load agents from Supabase:', error)
   }
 
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+  if (agents.length === 0) {
+    agents = filterSeedAgents({ category, search })
   }
 
-  const { data: agents } = await query.order('created_at', { ascending: false })
-
-  return <AgentList agents={(agents as Agent[]) || []} />
+  return <AgentList agents={agents} />
 }
 
 export default async function AgentsPage({ searchParams }: AgentsPageProps) {

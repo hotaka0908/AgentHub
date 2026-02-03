@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { ChatMessage } from '@/components/chat/chat-message'
 import { ChatInput } from '@/components/chat/chat-input'
 import { createClient } from '@/lib/supabase'
+import { getSeedAgentById } from '@/lib/seed-agents'
 import { Agent, Message, Conversation } from '@/types'
 import { ArrowLeft, Bot, Loader2 } from 'lucide-react'
 
@@ -65,24 +66,35 @@ export default function ChatPage() {
         data: { user },
       } = await supabase.auth.getUser()
 
-      const guest = !user
-      setIsGuest(guest)
+      let guest = !user
 
       // Fetch agent
-      const { data: agentData } = await supabase
+      const { data: agentData, error: agentError } = await supabase
         .from('agents')
         .select('*')
         .eq('id', agentId)
         .single()
 
-      if (!agentData) {
+      let resolvedAgent: Agent | null = null
+      const fromDatabase = !agentError && !!agentData
+      if (fromDatabase && agentData) {
+        resolvedAgent = agentData as Agent
+      } else {
+        resolvedAgent = getSeedAgentById(agentId)
+        if (resolvedAgent) {
+          guest = true
+        }
+      }
+
+      if (!resolvedAgent) {
         router.push('/agents')
         return
       }
 
-      setAgent(agentData as Agent)
+      setIsGuest(guest)
+      setAgent(resolvedAgent)
 
-      if (!guest && user) {
+      if (!guest && user && fromDatabase) {
         // Find or create conversation (authenticated users)
         let { data: existingConv } = await supabase
           .from('conversations')
@@ -117,10 +129,10 @@ export default function ChatPage() {
             .eq('conversation_id', existingConv.id)
             .order('created_at', { ascending: true })
 
-          setMessages((messagesData as Message[]) || [])
-        }
-      } else {
-        // Guest conversation (no persistence)
+        setMessages((messagesData as Message[]) || [])
+      }
+    } else {
+      // Guest conversation (no persistence)
         setConversation({
           id: crypto.randomUUID(),
           user_id: 'guest',

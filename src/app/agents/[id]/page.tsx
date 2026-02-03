@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Agent, AGENT_CATEGORIES, AgentCategory } from '@/types'
 import { formatPrice } from '@/lib/utils'
+import { getSeedAgentById } from '@/lib/seed-agents'
 import {
   Shield,
   Home,
@@ -33,16 +34,30 @@ interface AgentDetailPageProps {
 
 export default async function AgentDetailPage({ params }: AgentDetailPageProps) {
   const { id } = await params
-  const supabase = await createServerSupabaseClient()
+  let agentRecord: Agent | null = null
 
-  const { data: agent } = await supabase
-    .from('agents')
-    .select('*')
-    .eq('id', id)
-    .eq('is_active', true)
-    .single()
+  try {
+    const supabase = await createServerSupabaseClient()
 
-  if (!agent) {
+    const { data: agent } = await supabase
+      .from('agents')
+      .select('*')
+      .eq('id', id)
+      .eq('is_active', true)
+      .single()
+
+    if (agent) {
+      agentRecord = agent as Agent
+    }
+  } catch (error) {
+    console.error('Failed to load agent from Supabase:', error)
+  }
+
+  if (!agentRecord) {
+    agentRecord = getSeedAgentById(id)
+  }
+
+  if (!agentRecord) {
     notFound()
   }
 
@@ -67,13 +82,13 @@ export default async function AgentDetailPage({ params }: AgentDetailPageProps) 
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-start gap-4">
             <div className="p-4 bg-primary/10 rounded-xl text-primary">
-              {categoryIcons[(agent as Agent).category as AgentCategory]}
+              {categoryIcons[agentRecord.category as AgentCategory]}
             </div>
             <div className="space-y-2">
               <Badge variant="secondary">
-                {AGENT_CATEGORIES[(agent as Agent).category as AgentCategory]}
+                {AGENT_CATEGORIES[agentRecord.category as AgentCategory]}
               </Badge>
-              <h1 className="text-3xl font-bold">{(agent as Agent).name}</h1>
+              <h1 className="text-3xl font-bold">{agentRecord.name}</h1>
             </div>
           </div>
 
@@ -83,7 +98,7 @@ export default async function AgentDetailPage({ params }: AgentDetailPageProps) 
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground leading-relaxed">
-                {(agent as Agent).description}
+                {agentRecord.description}
               </p>
             </CardContent>
           </Card>
@@ -114,7 +129,7 @@ export default async function AgentDetailPage({ params }: AgentDetailPageProps) 
             <CardContent className="space-y-4">
               <div className="text-center">
                 <p className="text-3xl font-bold">
-                  {formatPrice((agent as Agent).price_per_message)}
+                  {formatPrice(agentRecord.price_per_message)}
                 </p>
                 <p className="text-sm text-muted-foreground">/ メッセージ</p>
               </div>

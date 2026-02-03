@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getSeedAgentById } from '@/lib/seed-agents'
 import OpenAI from 'openai'
 
 function getOpenAIClient() {
@@ -12,16 +13,29 @@ function getOpenAIClient() {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient()
     const { agentId, messages } = await request.json()
 
-    // Get agent info
-    const { data: agent } = await supabase
-      .from('agents')
-      .select('*')
-      .eq('id', agentId)
-      .eq('is_active', true)
-      .single()
+    let agent = null
+
+    try {
+      const supabase = await createServerSupabaseClient()
+      const { data } = await supabase
+        .from('agents')
+        .select('*')
+        .eq('id', agentId)
+        .eq('is_active', true)
+        .single()
+
+      if (data) {
+        agent = data
+      }
+    } catch (error) {
+      console.error('Failed to load agent from Supabase:', error)
+    }
+
+    if (!agent) {
+      agent = getSeedAgentById(agentId)
+    }
 
     if (!agent) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 })
