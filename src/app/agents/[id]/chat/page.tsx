@@ -62,89 +62,93 @@ export default function ChatPage() {
 
   useEffect(() => {
     const initChat = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
 
-      let guest = !user
+        let guest = !user
 
-      // Fetch agent
-      const { data: agentData, error: agentError } = await supabase
-        .from('agents')
-        .select('*')
-        .eq('id', agentId)
-        .single()
-
-      let resolvedAgent: Agent | null = null
-      const fromDatabase = !agentError && !!agentData
-      if (fromDatabase && agentData) {
-        resolvedAgent = agentData as Agent
-      } else {
-        resolvedAgent = getSeedAgentById(agentId)
-        if (resolvedAgent) {
-          guest = true
-        }
-      }
-
-      if (!resolvedAgent) {
-        router.push('/agents')
-        return
-      }
-
-      setIsGuest(guest)
-      setAgent(resolvedAgent)
-
-      if (!guest && user && fromDatabase) {
-        // Find or create conversation (authenticated users)
-        let { data: existingConv } = await supabase
-          .from('conversations')
+        // Fetch agent
+        const { data: agentData, error: agentError } = await supabase
+          .from('agents')
           .select('*')
-          .eq('user_id', user.id)
-          .eq('agent_id', agentId)
-          .order('updated_at', { ascending: false })
-          .limit(1)
+          .eq('id', agentId)
           .single()
 
-        if (!existingConv) {
-          const { data: newConv } = await supabase
-            .from('conversations')
-            .insert({
-              user_id: user.id,
-              agent_id: agentId,
-              title: `${(agentData as Agent).name}との会話`,
-            })
-            .select()
-            .single()
-
-          existingConv = newConv
+        let resolvedAgent: Agent | null = null
+        const fromDatabase = !agentError && !!agentData
+        if (fromDatabase && agentData) {
+          resolvedAgent = agentData as Agent
+        } else {
+          resolvedAgent = getSeedAgentById(agentId)
+          if (resolvedAgent) {
+            guest = true
+          }
         }
 
-        setConversation(existingConv as Conversation)
+        if (!resolvedAgent) {
+          router.push('/agents')
+          return
+        }
 
-        // Fetch messages
-        if (existingConv) {
-          const { data: messagesData } = await supabase
-            .from('messages')
+        setIsGuest(guest)
+        setAgent(resolvedAgent)
+
+        if (!guest && user && fromDatabase) {
+          // Find or create conversation (authenticated users)
+          let { data: existingConv } = await supabase
+            .from('conversations')
             .select('*')
-            .eq('conversation_id', existingConv.id)
-            .order('created_at', { ascending: true })
+            .eq('user_id', user.id)
+            .eq('agent_id', agentId)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .single()
 
-        setMessages((messagesData as Message[]) || [])
-      }
-    } else {
-      // Guest conversation (no persistence)
-        setConversation({
-          id: crypto.randomUUID(),
-          user_id: 'guest',
-          agent_id: agentId,
-          title: `${(agentData as Agent).name}との会話`,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        setMessages([])
-      }
+          if (!existingConv) {
+            const { data: newConv } = await supabase
+              .from('conversations')
+              .insert({
+                user_id: user.id,
+                agent_id: agentId,
+                title: `${resolvedAgent.name}との会話`,
+              })
+              .select()
+              .single()
 
-      setLoading(false)
+            existingConv = newConv
+          }
+
+          setConversation(existingConv as Conversation)
+
+          // Fetch messages
+          if (existingConv) {
+            const { data: messagesData } = await supabase
+              .from('messages')
+              .select('*')
+              .eq('conversation_id', existingConv.id)
+              .order('created_at', { ascending: true })
+
+            setMessages((messagesData as Message[]) || [])
+          }
+        } else {
+          // Guest conversation (no persistence)
+          setConversation({
+            id: crypto.randomUUID(),
+            user_id: 'guest',
+            agent_id: agentId,
+            title: `${resolvedAgent.name}との会話`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          setMessages([])
+        }
+      } catch (error) {
+        console.error('Failed to init chat:', error)
+      } finally {
+        setLoading(false)
+      }
     }
 
     initChat()
