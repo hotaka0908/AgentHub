@@ -52,7 +52,7 @@ export default async function HomePage() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg" variant="secondary">
-              <Link href="/agents?category=travel">旅行計画を作成</Link>
+              <Link href="/agents/travel">旅行計画を作成</Link>
             </Button>
             <Button asChild size="lg">
               <Link href="/agents">

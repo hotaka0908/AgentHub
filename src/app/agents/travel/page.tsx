@@ -1,0 +1,40 @@
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { Button } from '@/components/ui/button'
+
+export default async function TravelAgentStartPage() {
+  const supabase = await createServerSupabaseClient()
+
+  const { data: agent } = await supabase
+    .from('agents')
+    .select('id, name')
+    .eq('category', 'travel')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (agent?.id) {
+    redirect(`/agents/${agent.id}/chat`)
+  }
+
+  return (
+    <div className="container py-12">
+      <div className="mx-auto max-w-xl rounded-2xl border bg-background p-6 text-center space-y-4">
+        <h1 className="text-2xl font-bold">旅行エージェントが見つかりませんでした</h1>
+        <p className="text-sm text-muted-foreground">
+          現在、旅行カテゴリのエージェントが登録されていないか無効化されています。
+        </p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button asChild>
+            <Link href="/agents">全エージェントを見る</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/agents?category=travel">旅行カテゴリを見る</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
