@@ -46,10 +46,6 @@ export default async function AgentDetailPage({ params }: AgentDetailPageProps) 
     notFound()
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   const features = [
     '24時間いつでも相談可能',
     '専門知識に基づいた回答',
@@ -129,23 +125,15 @@ export default async function AgentDetailPage({ params }: AgentDetailPageProps) 
                 <p>・いつでも利用停止可能</p>
               </div>
 
-              {user ? (
-                <Button asChild className="w-full" size="lg">
-                  <Link href={`/agents/${id}/chat`}>
-                    <MessageCircle className="mr-2 h-5 w-5" />
-                    チャットを始める
-                  </Link>
-                </Button>
-              ) : (
-                <div className="space-y-2">
-                  <Button asChild className="w-full" size="lg">
-                    <Link href="/auth/signup">無料で登録</Link>
-                  </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    チャットを始めるにはアカウントが必要です
-                  </p>
-                </div>
-              )}
+              <Button asChild className="w-full" size="lg">
+                <Link href={`/agents/${id}/chat`}>
+                  <MessageCircle className="mr-2 h-5 w-5" />
+                  チャットを始める
+                </Link>
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                ログイン不要でお試しできます（履歴は保存されません）
+              </p>
             </CardContent>
           </Card>
         </div>

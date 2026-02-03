@@ -9,8 +9,53 @@ interface ChatMessageProps {
   message: Message
 }
 
+const structuredSections = ['概要', '旅程', '交通', '宿', '予算', '次の質問'] as const
+
+type StructuredSection = {
+  title: (typeof structuredSections)[number]
+  body: string
+}
+
+function parseStructuredResponse(content: string): StructuredSection[] | null {
+  const lines = content.split('\n')
+  const sections: StructuredSection[] = []
+  let current: StructuredSection | null = null
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd()
+    const match = line.match(
+      /^\s*-\s*(概要|旅程|交通|宿|予算|次の質問)\s*:\s*(.*)$/
+    )
+
+    if (match) {
+      if (current) sections.push(current)
+      const [, title, firstLine] = match as [string, StructuredSection['title'], string]
+      current = { title, body: firstLine ? `${firstLine}` : '' }
+      continue
+    }
+
+    if (current) {
+      const nextLine = line.trim()
+      if (nextLine.length > 0) {
+        current.body = current.body
+          ? `${current.body}\n${nextLine}`
+          : nextLine
+      }
+    }
+  }
+
+  if (current) sections.push(current)
+  if (sections.length < 2) return null
+
+  return sections.map((section) => ({
+    ...section,
+    body: section.body.trim(),
+  }))
+}
+
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === 'user'
+  const structured = !isUser ? parseStructuredResponse(message.content) : null
 
   return (
     <div
@@ -32,7 +77,20 @@ export function ChatMessage({ message }: ChatMessageProps) {
             : 'bg-muted'
         )}
       >
-        <p className="whitespace-pre-wrap">{message.content}</p>
+        {structured ? (
+          <div className="space-y-3 text-sm text-foreground">
+            {structured.map((section) => (
+              <div key={section.title}>
+                <p className="font-semibold">{section.title}</p>
+                <p className="whitespace-pre-wrap text-muted-foreground">
+                  {section.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="whitespace-pre-wrap">{message.content}</p>
+        )}
       </div>
     </div>
   )

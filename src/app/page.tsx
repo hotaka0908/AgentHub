@@ -50,7 +50,10 @@ export default async function HomePage() {
             保険、不動産、旅行計画、遺産相続、法律など、
             専門分野に特化したAIエージェントに即座に相談できます。
           </p>
-          <div className="space-x-4">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button asChild size="lg" variant="secondary">
+              <Link href="/agents?category=travel">旅行計画を作成</Link>
+            </Button>
             <Button asChild size="lg">
               <Link href="/agents">
                 エージェントを探す

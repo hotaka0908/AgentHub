@@ -1,23 +1,41 @@
 'use client'
 
-import { useState, useRef, KeyboardEvent } from 'react'
+import { useState, useRef, KeyboardEvent, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2, Send } from 'lucide-react'
 
 interface ChatInputProps {
   onSend: (message: string) => void
+  value?: string
+  onChange?: (value: string) => void
   disabled?: boolean
   loading?: boolean
 }
 
-export function ChatInput({ onSend, disabled, loading }: ChatInputProps) {
+export function ChatInput({
+  onSend,
+  value,
+  onChange,
+  disabled,
+  loading,
+}: ChatInputProps) {
   const [input, setInput] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const isControlled = value !== undefined && onChange !== undefined
+  const inputValue = isControlled ? value : input
+
+  const setValue = (nextValue: string) => {
+    if (isControlled) {
+      onChange(nextValue)
+      return
+    }
+    setInput(nextValue)
+  }
 
   const handleSubmit = () => {
-    if (input.trim() && !disabled && !loading) {
-      onSend(input.trim())
-      setInput('')
+    if (inputValue.trim() && !disabled && !loading) {
+      onSend(inputValue.trim())
+      setValue('')
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
       }
@@ -38,12 +56,16 @@ export function ChatInput({ onSend, disabled, loading }: ChatInputProps) {
     }
   }
 
+  useEffect(() => {
+    handleInput()
+  }, [inputValue])
+
   return (
     <div className="flex gap-2 items-end p-4 border-t bg-background">
       <textarea
         ref={textareaRef}
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
+        value={inputValue}
+        onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onInput={handleInput}
         placeholder="メッセージを入力..."
@@ -53,7 +75,7 @@ export function ChatInput({ onSend, disabled, loading }: ChatInputProps) {
       />
       <Button
         onClick={handleSubmit}
-        disabled={!input.trim() || disabled || loading}
+        disabled={!inputValue.trim() || disabled || loading}
         size="icon"
         className="h-12 w-12"
       >

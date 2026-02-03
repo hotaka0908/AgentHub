@@ -13,14 +13,6 @@ function getOpenAIClient() {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { agentId, messages } = await request.json()
 
     // Get agent info
@@ -28,6 +20,7 @@ export async function POST(request: NextRequest) {
       .from('agents')
       .select('*')
       .eq('id', agentId)
+      .eq('is_active', true)
       .single()
 
     if (!agent) {
